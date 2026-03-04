@@ -915,23 +915,48 @@
 
         // --- Zooming logic ---
         window.addEventListener('wheel', (e) => {
-            if (e.altKey) {
-                e.preventDefault();
+            if (!e.altKey) return;
 
-                const step = GLOBAL_CONFIG.ZOOM.step;
-                if (e.deltaY < 0) {
-                    currentZoom += step;
-                } else {
-                    currentZoom -= step;
-                }
+            e.preventDefault();
 
-                currentZoom = Math.min(Math.max(GLOBAL_CONFIG.ZOOM.minScale, currentZoom), GLOBAL_CONFIG.ZOOM.maxScale);
-                currentZoom = parseFloat(currentZoom.toFixed(2));
+            const oldZoom = currentZoom;
+            const step = GLOBAL_CONFIG.ZOOM.step;
 
-                applyZoom(currentZoom);
-                GM_setValue(zoomKey, currentZoom);
-                showIndicator(currentZoom);
+            if (e.deltaY < 0) {
+                currentZoom += step;
+            } else {
+                currentZoom -= step;
             }
+
+            currentZoom = Math.min(
+                Math.max(GLOBAL_CONFIG.ZOOM.minScale, currentZoom),
+                GLOBAL_CONFIG.ZOOM.maxScale
+            );
+
+            currentZoom = parseFloat(currentZoom.toFixed(2));
+
+            if (currentZoom === oldZoom) return;
+
+            // --- 关键部分 ---
+            const mouseX = e.clientX;
+            const mouseY = e.clientY;
+
+            const scrollX = window.scrollX;
+            const scrollY = window.scrollY;
+
+            const contentX = (scrollX + mouseX) / oldZoom;
+            const contentY = (scrollY + mouseY) / oldZoom;
+
+            applyZoom(currentZoom);
+
+            const newScrollX = contentX * currentZoom - mouseX;
+            const newScrollY = contentY * currentZoom - mouseY;
+
+            window.scrollTo(newScrollX, newScrollY);
+
+            GM_setValue(zoomKey, currentZoom);
+            showIndicator(currentZoom);
+
         }, { passive: false });
 
         // --- Panning logic (Right Click Drag) ---
